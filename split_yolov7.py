@@ -28,22 +28,10 @@ torch.set_printoptions(profile="full")
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
 device ='cpu'
 
-weights = "yolov7.pt"
-
-file = Path(str(weights).strip().replace("'", '').lower())
-
-if not file.exists():
-    print("need to download the weights")
-    os.chdir(yoloGitPath)
-    attempt_download(weights)
-    os.chdir("..")
-    shutil.move(yoloGitPath + weights, ".")
-
+weights ="yolov7.pt"
 
 image_path = yoloGitPath + "inference/images/horses.jpg"
-
 result_path = "split_yolov7_model/"
-
 Path(result_path).mkdir(parents=True, exist_ok=True)
 
 first_half_yaml_path = result_path + "yolov7_first_half.yaml"
@@ -54,9 +42,19 @@ second_half_yaml_path = result_path + "yolov7_second_half.yaml"
 second_half_state_dict_path = result_path + "yolov7_second_half_state_dict.pt"
 second_half_full_model_path = result_path + "yolov7_second_half.pt"
 
-
 cut_at_layer = 24
 #cut_at_layer = 11
+
+
+# if weights are not present, download them
+file = Path(str(yoloGitPath + weights).strip().replace("'", '').lower())
+if not file.exists():
+    print("need to download the weights")
+    os.chdir(yoloGitPath)
+    attempt_download(weights)
+    os.chdir("..")
+
+weights = yoloGitPath + weights
 
 # function for creating yaml files for both halfs of the model
 def create_model_halfs_yaml(_yaml_file, _cut_at_layer):
@@ -153,7 +151,7 @@ def prepare_test_image(im0):
     print("load test image to compare with original yolov7 model")
     
     # Padded resize
-    _img = letterbox(copy(im0))[0]
+    _img = letterbox(copy(im0), auto=False)[0]
 
     # Convert
     _img = _img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x640x640
@@ -175,9 +173,6 @@ if __name__ == '__main__':
     img0 = cv2.imread(image_path)  # BGR
     img = prepare_test_image(img0)
 
-    # if weights are not present, download them
-
-    
     # load the original yolov7 model
     ckpt = torch.load(weights, weights_only=False, map_location = device)
     yolov7_model = ckpt['model'].float().eval()  # FP32 model
