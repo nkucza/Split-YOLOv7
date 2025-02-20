@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import onnx
+import sys
+
+sys.path.append('yolov7')
 
 import models
 from utils.activations import Hardswish, SiLU
