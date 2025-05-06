@@ -30,8 +30,11 @@ device ='cpu'
 
 weights ="yolov7.pt"
 
+#cut_at_layer = 24
+cut_at_layer = 2
+
 image_path = yoloGitPath + "inference/images/horses.jpg"
-result_path = "split_yolov7_model/"
+result_path = "split_yolov7_model"+ str(cut_at_layer)+"/"
 Path(result_path).mkdir(parents=True, exist_ok=True)
 
 first_half_yaml_path = result_path + "yolov7_first_half.yaml"
@@ -41,10 +44,6 @@ first_half_full_model_path = result_path + "yolov7_first_half.pt"
 second_half_yaml_path = result_path + "yolov7_second_half.yaml"
 second_half_state_dict_path = result_path + "yolov7_second_half_state_dict.pt"
 second_half_full_model_path = result_path + "yolov7_second_half.pt"
-
-cut_at_layer = 24
-#cut_at_layer = 11
-
 
 # if weights are not present, download them
 file = Path(str(yoloGitPath + weights).strip().replace("'", '').lower())
@@ -81,7 +80,7 @@ def create_model_halfs_yaml(_yaml_file, _cut_at_layer):
     print("\n-------------------")
 
     _sec_half_yaml['backbone'] = _sec_half_yaml['backbone'][_cut_at_layer:]
-    _sec_half_yaml['ch'] = 512  #_first_half_yaml['backbone'][-1][-1][0]
+    _sec_half_yaml['ch'] = 64 #512  #_first_half_yaml['backbone'][-1][-1][0]
 
 
     print("-------------------------------------------------------------")
