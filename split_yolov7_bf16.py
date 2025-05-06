@@ -34,7 +34,7 @@ weights ="yolov7.pt"
 cut_at_layer = 2
 
 image_path = yoloGitPath + "inference/images/horses.jpg"
-result_path = "split_yolov7_model_layer_"+ str(cut_at_layer)+"/"
+result_path = "split_yolov7_model_layer_"+ str(cut_at_layer)+"_bf16/"
 Path(result_path).mkdir(parents=True, exist_ok=True)
 
 first_half_yaml_path = result_path + "yolov7_first_half.yaml"
@@ -171,10 +171,11 @@ if __name__ == '__main__':
     # load and prepare the test image image
     img0 = cv2.imread(image_path)  # BGR
     img = prepare_test_image(img0)
+    img_bf16 = img.bfloat16()
 
     # load the original yolov7 model
     ckpt = torch.load(weights, weights_only=False, map_location = device)
-    yolov7_model = ckpt['model'].float().eval()  # FP32 model
+    yolov7_model = ckpt['model'].bfloat16().eval()  # FP32 model
 
     # create yaml files and state dicts for both halfs of the model
     create_model_halfs_yaml(yolov7_model.yaml, cut_at_layer)
@@ -185,11 +186,10 @@ if __name__ == '__main__':
     secModel = Model(second_half_yaml_path)
 
     firsModel.load_state_dict(torch.load(first_half_state_dict_path, weights_only=True))
-    firsModel.float().eval()
+    firsModel.bfloat16().eval()
 
     secModel.load_state_dict(torch.load(second_half_state_dict_path, weights_only=True))
-    secModel.float().eval()
-
+    
     m = secModel.model[-1]  # Detect() module
     m1 = yolov7_model.model[-1]
 
@@ -202,6 +202,8 @@ if __name__ == '__main__':
     for i in range(len(m.m)):
         m.m[i].bias = m1.m[i].bias
 
+    secModel.bfloat16().eval()
+
     torch.save(firsModel, first_half_full_model_path)
     torch.save(secModel, second_half_full_model_path)
 
@@ -211,7 +213,7 @@ if __name__ == '__main__':
 
     gn = torch.tensor(img0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
     
-    pred_original = yolov7_model(img)[0]
+    pred_original = yolov7_model(img_bf16)[0]
     pred_original_nms = copy(non_max_suppression(pred_original))
 
     print("Original:" ,len(pred_original_nms[-1]), "detection/s in this image:")
@@ -227,7 +229,8 @@ if __name__ == '__main__':
             plot_one_box(xyxy, img0, label=label, color=(255,0,0), line_thickness=1)
 
 
-    mid_pred = firsModel(img)
+
+    mid_pred = firsModel(img_bf16).bfloat16()
     pred = secModel(mid_pred)[0]
     pred_nms = copy(non_max_suppression(pred))
 
@@ -248,9 +251,9 @@ if __name__ == '__main__':
     cv2.imwrite(result_path + "test.png", img0)
 
     # create and save the graph of the original and both parts of the split model 
-    draw_graph(yolov7_model, input_data=img, expand_nested=True, save_graph=True, filename= result_path + "yolov7_graph")
-    draw_graph(firsModel, input_data=img, expand_nested=True, save_graph=True, filename= result_path + "yolov7_first_half_graph")
-    draw_graph(secModel, input_data=mid_pred, expand_nested=True, save_graph=True, filename= result_path + "yolov7_second_half_graph")
+    #draw_graph(yolov7_model, input_data=img, expand_nested=True, save_graph=True, filename= result_path + "yolov7_graph")
+    #draw_graph(firsModel, input_data=img, expand_nested=True, save_graph=True, filename= result_path + "yolov7_first_half_graph")
+    #draw_graph(secModel, input_data=mid_pred, expand_nested=True, save_graph=True, filename= result_path + "yolov7_second_half_graph")
 
 
 
